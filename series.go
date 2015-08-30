@@ -8,6 +8,8 @@
 
 package datadog
 
+import "fmt"
+
 // DataPoint is a tuple of [UNIX timestamp, value]. This has to use floats
 // because the value could be non-integer.
 type DataPoint [2]float64
@@ -32,4 +34,27 @@ type reqPostSeries struct {
 func (self *Client) PostMetrics(series []Metric) error {
 	return self.doJsonRequest("POST", "/v1/series",
 		reqPostSeries{Series: series}, nil)
+}
+
+// GetMetric represents a collection of datapoints returned for a given query. It
+// is subtly different than a post metric so we can't reuse Metric here
+type GetMetric struct {
+	Metric    string      `json:"metric`
+	Pointlist []DataPoint `json:"pointlist"`
+	Interval  int64       `json:"interval"`
+}
+
+// reqQuery from /api/v1/query
+type reqQuery struct {
+	Series []GetMetric `json:"series"`
+}
+
+func (self *Client) GetMetrics(from, to int64, query string) (*reqQuery, error) {
+	var out reqQuery
+	uri := fmt.Sprintf("/v1/query?from=%d&to=%d&query=%s", from, to, query)
+	err := self.doJsonRequest("GET", uri, nil, &out)
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
